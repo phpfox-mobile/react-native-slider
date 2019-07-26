@@ -167,6 +167,10 @@ export default class Slider extends PureComponent {
      * Used to configure the animation parameters.  These are the same parameters in the Animated library.
      */
     animationConfig: PropTypes.object,
+    /**
+     * Set to true to let this View affect on RTL Layout
+     */
+    allowRTL: PropTypes.bool
   };
 
   static defaultProps = {
@@ -179,6 +183,7 @@ export default class Slider extends PureComponent {
     thumbTintColor: '#343434',
     thumbTouchSize: { width: 40, height: 40 },
     debugTouchArea: false,
+    allowRTL: true,
     animationType: 'timing',
   };
 
@@ -266,11 +271,13 @@ export default class Slider extends PureComponent {
     };
 
     const touchOverflowStyle = this._getTouchOverflowStyle();
+    const layoutDirectionStyle = I18nManager.isRTL ?
+      { transform : [{ scaleX :this.props.allowRTL ? 1 : -1 }] } : { }
 
     return (
       <View
         {...other}
-        style={[mainStyles.container, style]}
+        style={[mainStyles.container, style, layoutDirectionStyle]}
         onLayout={this._measureContainer}
       >
         <View
@@ -303,7 +310,7 @@ export default class Slider extends PureComponent {
         </Animated.View>
         <View
           renderToHardwareTextureAndroid
-          style={[defaultStyles.touchArea, touchOverflowStyle]}
+          style={[defaultStyles.touchArea, touchOverflowStyle, layoutDirectionStyle]}
           {...this._panResponder.panHandlers}
         >
           {debugTouchArea === true &&
@@ -330,9 +337,11 @@ export default class Slider extends PureComponent {
 
   _handleStartShouldSetPanResponder = (
     e: Object /* gestureState: Object */,
-  ): boolean =>
+  ): boolean => {
+    return this._thumbHitTest(e);
+  }
     // Should we become active when the user presses down on the thumb?
-    this._thumbHitTest(e);
+
 
   _handleMoveShouldSetPanResponder(/* e: Object, gestureState: Object */): boolean {
     // Should we become active when the user moves a touch over the thumb?
@@ -410,7 +419,7 @@ export default class Slider extends PureComponent {
 
   _getThumbLeft = (value: number) => {
     const nonRtlRatio = this._getRatio(value);
-    const ratio = I18nManager.isRTL ? 1 - nonRtlRatio : nonRtlRatio;
+    const ratio = I18nManager.isRTL && this.props.allowRTL ? 1 - nonRtlRatio : nonRtlRatio;
     return (
       ratio * (this.state.containerSize.width - this.state.thumbSize.width)
     );
@@ -421,7 +430,7 @@ export default class Slider extends PureComponent {
     const thumbLeft = this._previousLeft + gestureState.dx;
 
     const nonRtlRatio = thumbLeft / length;
-    const ratio = I18nManager.isRTL ? 1 - nonRtlRatio : nonRtlRatio;
+    const ratio = I18nManager.isRTL && this.props.allowRTL ? 1 - nonRtlRatio : nonRtlRatio;
 
     if (this.props.step) {
       return Math.max(
